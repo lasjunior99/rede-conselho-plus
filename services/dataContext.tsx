@@ -70,12 +70,12 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
-  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const [tools, setTools] = useState<Tool[]>([]);
+  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(INITIAL_BLOG_POSTS);
+  const [newsItems, setNewsItems] = useState<NewsItem[]>(INITIAL_NEWS);
+  const [tools, setTools] = useState<Tool[]>(INITIAL_TOOLS);
   const [metaTags, setMetaConfig] = useState<MetaConfig>(DEFAULT_META_TAGS);
-  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [metrics, setMetrics] = useState<Metric[]>(INITIAL_METRICS);
   const [messages, setMessages] = useState<Message[]>([]);
   const [internalEmails, setInternalEmails] = useState<string[]>(['diretoria@conselhomais.com.br']);
   const [loading, setLoading] = useState(true);
