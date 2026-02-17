@@ -56,9 +56,7 @@ interface DataContextType {
   updateInternalEmails: (emails: string[]) => void;
 
   isAdmin: boolean;
-  isSuperAdmin: boolean;
   login: (password: string) => boolean;
-  loginSuperAdmin: (password: string) => boolean;
   logout: () => void;
   changePassword: (newPass: string) => void;
 }
@@ -77,9 +75,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('admin123');
-  const SUPER_ADMIN_PASSWORD = 'RC2025+';
+  const [adminPassword, setAdminPassword] = useState('RC2025+');
 
   // Real-time synchronization with Firestore
   useEffect(() => {
@@ -256,19 +252,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = (password: string) => {
-    if (password === adminPassword || password === SUPER_ADMIN_PASSWORD) {
+    if (password === adminPassword) {
       setIsAdmin(true);
-      if (password === SUPER_ADMIN_PASSWORD) {
-        setIsSuperAdmin(true);
-      }
-      return true;
-    }
-    return false;
-  };
-
-  const loginSuperAdmin = (password: string) => {
-    if (password === SUPER_ADMIN_PASSWORD) {
-      setIsSuperAdmin(true);
       return true;
     }
     return false;
@@ -276,7 +261,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setIsAdmin(false);
-    setIsSuperAdmin(false);
   };
 
   const changePassword = (newPass: string) => setAdminPassword(newPass);
@@ -291,7 +275,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       addMetric, removeMetric,
       addTool, removeTool,
       addMessage, replyToMessage, updateMessageStatus, removeMessage, updateInternalEmails,
-      isAdmin, isSuperAdmin, login, loginSuperAdmin, logout, changePassword,
+      isAdmin, login, logout, changePassword,
       loading
     }}>
       {children}
