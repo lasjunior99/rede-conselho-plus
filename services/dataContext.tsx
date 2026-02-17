@@ -101,32 +101,56 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     console.log("[RC+] Iniciando DataProvider (Dados Públicos)...");
 
+    // List of collections we consider critical for initial load
+    const collectionsToLoad = ['members', 'blogPosts', 'newsItems', 'tools', 'metaTags'];
+    let loadedcount = 0;
+
+    const checkLoadingComplete = () => {
+      loadedcount++;
+      if (loadedcount >= collectionsToLoad.length) {
+        console.log("[RC+] All public listeners received initial data. Finishing loading.");
+        setLoading(false);
+      }
+    };
+
     const unsubs = [
       onSnapshot(collection(db, 'members'), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data() } as Member));
         setMembers(data.length > 0 ? data : INITIAL_MEMBERS);
+        checkLoadingComplete();
       }),
       onSnapshot(query(collection(db, 'blogPosts'), orderBy('date', 'desc')), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data() } as BlogPost));
         setBlogPosts(data.length > 0 ? data : INITIAL_BLOG_POSTS);
+        checkLoadingComplete();
       }),
       onSnapshot(query(collection(db, 'newsItems'), orderBy('date', 'desc')), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data() } as NewsItem));
         setNewsItems(data.length > 0 ? data : INITIAL_NEWS);
+        checkLoadingComplete();
       }),
       onSnapshot(collection(db, 'tools'), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data() } as Tool));
         setTools(data.length > 0 ? data : INITIAL_TOOLS);
+        checkLoadingComplete();
       }),
       onSnapshot(doc(db, 'config', 'metaTags'), (doc) => {
         if (doc.exists()) setMetaConfig(doc.data() as MetaConfig);
+        checkLoadingComplete();
       }),
     ];
 
-    console.log("[RC+] Listeners Públicos configurados. Finalizando loading.");
-    setLoading(false);
+    // Safety timeout: if data takes too long (e.g. 5s), force loading to false so user isn't stuck
+    const safetyTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn("[RC+] Loading timed out. Forcing app to show.");
+        setLoading(false);
+      }
+    }, 8000);
+
     return () => {
       console.log("[RC+] Removendo listeners públicos.");
+      clearTimeout(safetyTimeout);
       unsubs.forEach(unsub => unsub());
     };
   }, []);

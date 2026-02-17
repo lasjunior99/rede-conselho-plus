@@ -40,7 +40,8 @@ const LoadingScreen = () => (
   <div className="flex items-center justify-center min-h-screen bg-slate-50">
     <div className="flex flex-col items-center">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mb-4"></div>
-      <p className="text-slate-500 font-medium">Carregando Rede Conselho+...</p>
+      <h2 className="text-xl font-bold text-brand-blue mb-2">REDE CONSELHO+</h2>
+      <p className="text-slate-500 text-sm">Sincronizando dados...</p>
     </div>
   </div>
 );
