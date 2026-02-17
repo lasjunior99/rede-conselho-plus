@@ -70,15 +70,30 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(INITIAL_BLOG_POSTS);
-  const [newsItems, setNewsItems] = useState<NewsItem[]>(INITIAL_NEWS);
-  const [tools, setTools] = useState<Tool[]>(INITIAL_TOOLS);
-  const [metaTags, setMetaConfig] = useState<MetaConfig>(DEFAULT_META_TAGS);
-  const [metrics, setMetrics] = useState<Metric[]>(INITIAL_METRICS);
+
+  // Helper to load from cache
+  const loadCache = <T,>(key: string, fallback: T): T => {
+    try {
+      const cached = localStorage.getItem(`rc_${key}`);
+      return cached ? JSON.parse(cached) : fallback;
+    } catch (e) {
+      console.warn(`[RC+] Erro ao ler cache para ${key}:`, e);
+      return fallback;
+    }
+  };
+
+  const [members, setMembers] = useState<Member[]>(() => loadCache('members', []));
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(() => loadCache('blogPosts', []));
+  const [newsItems, setNewsItems] = useState<NewsItem[]>(() => loadCache('newsItems', []));
+  const [tools, setTools] = useState<Tool[]>(() => loadCache('tools', []));
+  const [metaTags, setMetaConfig] = useState<MetaConfig>(() => loadCache('metaTags', DEFAULT_META_TAGS));
+  const [metrics, setMetrics] = useState<Metric[]>(() => loadCache('metrics', []));
   const [messages, setMessages] = useState<Message[]>([]);
   const [internalEmails, setInternalEmails] = useState<string[]>(['diretoria@conselhomais.com.br']);
-  const [loading, setLoading] = useState(true);
+
+  // Se já temos dados no cache, não precisamos mostrar o loading inicial
+  const hasCache = members.length > 0 || blogPosts.length > 0;
+  const [loading, setLoading] = useState(!hasCache);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('RC2025+');
@@ -107,8 +122,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const checkLoadingComplete = () => {
       loadedcount++;
-      if (loadedcount >= collectionsToLoad.length) {
-        console.log("[RC+] All public listeners received initial data. Finishing loading.");
+      // Se não tínhamos cache, liberamos o loading assim que os dados chegarem
+      if (loading && loadedcount >= collectionsToLoad.length) {
+        console.log("[RC+] Dados iniciais recebidos. Liberando UI.");
         setLoading(false);
       }
     };
@@ -116,37 +132,45 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubs = [
       onSnapshot(collection(db, 'members'), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data() } as Member));
-        setMembers(data.length > 0 ? data : INITIAL_MEMBERS);
+        setMembers(data);
+        localStorage.setItem('rc_members', JSON.stringify(data));
         checkLoadingComplete();
       }),
       onSnapshot(query(collection(db, 'blogPosts'), orderBy('date', 'desc')), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data() } as BlogPost));
-        setBlogPosts(data.length > 0 ? data : INITIAL_BLOG_POSTS);
+        setBlogPosts(data);
+        localStorage.setItem('rc_blogPosts', JSON.stringify(data));
         checkLoadingComplete();
       }),
       onSnapshot(query(collection(db, 'newsItems'), orderBy('date', 'desc')), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data() } as NewsItem));
-        setNewsItems(data.length > 0 ? data : INITIAL_NEWS);
+        setNewsItems(data);
+        localStorage.setItem('rc_newsItems', JSON.stringify(data));
         checkLoadingComplete();
       }),
       onSnapshot(collection(db, 'tools'), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data() } as Tool));
-        setTools(data.length > 0 ? data : INITIAL_TOOLS);
+        setTools(data);
+        localStorage.setItem('rc_tools', JSON.stringify(data));
         checkLoadingComplete();
       }),
       onSnapshot(doc(db, 'config', 'metaTags'), (doc) => {
-        if (doc.exists()) setMetaConfig(doc.data() as MetaConfig);
+        if (doc.exists()) {
+          const data = doc.data() as MetaConfig;
+          setMetaConfig(data);
+          localStorage.setItem('rc_metaTags', JSON.stringify(data));
+        }
         checkLoadingComplete();
       }),
     ];
 
-    // Safety timeout: if data takes too long (e.g. 5s), force loading to false so user isn't stuck
+    // Safety timeout: apenas se estiver travado no loading
     const safetyTimeout = setTimeout(() => {
       if (loading) {
-        console.warn("[RC+] Loading timed out. Forcing app to show.");
+        console.warn("[RC+] Timeout de segurança. Liberando UI (pode estar vazia).");
         setLoading(false);
       }
-    }, 8000);
+    }, 5000);
 
     return () => {
       console.log("[RC+] Removendo listeners públicos.");
