@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Conteúdo Público (Leitura Livre, Escrita Autenticada)
+    match /members/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    match /blogPosts/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    match /newsItems/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    match /tools/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    match /config/metaTags {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Conteúdo Privado/Admin (Leitura e Escrita apenas Autenticado)
+    match /messages/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+    match /metrics/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+    match /config/internalEmails {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Regra padrão de segurança (bloqueia tudo que não foi listado acima)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -16,6 +16,12 @@ import {
   Timestamp,
   serverTimestamp
 } from 'firebase/firestore';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "firebase/auth";
 
 
 interface DataContextType {
@@ -56,7 +62,7 @@ interface DataContextType {
   updateInternalEmails: (emails: string[]) => void;
 
   isAdmin: boolean;
-  login: (password: string) => boolean;
+  login: (password: string) => Promise<boolean>;
   logout: () => void;
   changePassword: (newPass: string) => void;
 }
@@ -77,9 +83,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('RC2025+');
 
-  // Real-time synchronization with Firestore
+  // Monitorar estado de autenticação do Firebase
   useEffect(() => {
-    console.log("[RC+] Iniciando DataProvider...");
+    const unsubAuth = onAuthStateChanged(auth, (user: any) => {
+      if (user) {
+        console.log("[RC+] Usuário autenticado:", user.email);
+        setIsAdmin(true);
+      } else {
+        console.log("[RC+] Usuário desconectado.");
+        setIsAdmin(false);
+      }
+    });
+    return () => unsubAuth();
+  }, []);
+
+  // Real-time synchronization with Firestore - PUBLIC DATA
+  useEffect(() => {
+    console.log("[RC+] Iniciando DataProvider (Dados Públicos)...");
 
     const unsubs = [
       onSnapshot(collection(db, 'members'), (snapshot) => {
@@ -101,6 +121,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       onSnapshot(doc(db, 'config', 'metaTags'), (doc) => {
         if (doc.exists()) setMetaConfig(doc.data() as MetaConfig);
       }),
+    ];
+
+    console.log("[RC+] Listeners Públicos configurados. Finalizando loading.");
+    setLoading(false);
+    return () => {
+      console.log("[RC+] Removendo listeners públicos.");
+      unsubs.forEach(unsub => unsub());
+    };
+  }, []);
+
+  // Real-time synchronization with Firestore - ADMIN DATA
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    console.log("[RC+] Iniciando Listeners Administrativos...");
+
+    const unsubs = [
       onSnapshot(collection(db, 'metrics'), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data() } as Metric));
         setMetrics(data.length > 0 ? data : INITIAL_METRICS);
@@ -116,13 +153,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       })
     ];
 
-    console.log("[RC+] Listeners do Firestore configurados. Finalizando loading.");
-    setLoading(false);
     return () => {
-      console.log("[RC+] Desmontando DataProvider, removendo listeners.");
+      console.log("[RC+] Removendo listeners administrativos.");
       unsubs.forEach(unsub => unsub());
     };
-  }, []);
+  }, [isAdmin]);
 
   const addMember = async (member: Member) => {
     await setDoc(doc(db, 'members', member.id), member);
@@ -251,16 +286,29 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const login = (password: string) => {
-    if (password === adminPassword) {
-      setIsAdmin(true);
+  const login = async (password: string) => {
+    const email = "admin@redeconselho.plus";
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       return true;
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+          return true;
+        } catch (createError: any) {
+          if (createError.code === 'auth/email-already-in-use') {
+            return false;
+          }
+        }
+      }
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
-    setIsAdmin(false);
+    signOut(auth);
   };
 
   const changePassword = (newPass: string) => setAdminPassword(newPass);

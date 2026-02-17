@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Converter Favicon SVG para PNG</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #003B4D;
+            margin-bottom: 20px;
+        }
+
+        #preview {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        button {
+            background: #C5A059;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #b08f4a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #003B4D;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎨 Converter Favicon para PNG</h1>
+        <p>Clique no botão abaixo para baixar o favicon como PNG (180x180)</p>
+
+        <div id="preview">
+            <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg"
+                id="favicon-svg">
+                <!-- Background -->
+                <rect width="180" height="180" fill="#003B4D" rx="20" />
+
+                <!-- Outer Pentagon Nodes -->
+                <circle cx="90" cy="35" r="7" fill="#C5A059" />
+                <circle cx="153" cy="72" r="7" fill="#C5A059" />
+                <circle cx="130" cy="144" r="7" fill="#C5A059" />
+                <circle cx="50" cy="144" r="7" fill="#C5A059" />
+                <circle cx="27" cy="72" r="7" fill="#C5A059" />
+
+                <!-- Inner Pentagon Nodes (Rotated) -->
+                <circle cx="90" cy="135" r="6" fill="#C5A059" />
+                <circle cx="45" cy="99" r="6" fill="#C5A059" />
+                <circle cx="63" cy="50" r="6" fill="#C5A059" />
+                <circle cx="117" cy="50" r="6" fill="#C5A059" />
+                <circle cx="135" cy="99" r="6" fill="#C5A059" />
+
+                <!-- Connections - Outer Ring -->
+                <path d="M90 35 L153 72 L130 144 L50 144 L27 72 Z" stroke="#C5A059" stroke-width="3" fill="none" />
+
+                <!-- Connections - Inner Ring -->
+                <path d="M63 50 L117 50 L135 99 L90 135 L45 99 Z" stroke="#C5A059" stroke-width="3" fill="none" />
+
+                <!-- Connections - Cross -->
+                <line x1="90" y1="35" x2="63" y2="50" stroke="#C5A059" stroke-width="3" />
+                <line x1="90" y1="35" x2="117" y2="50" stroke="#C5A059" stroke-width="3" />
+
+                <line x1="153" y1="72" x2="117" y2="50" stroke="#C5A059" stroke-width="3" />
+                <line x1="153" y1="72" x2="135" y2="99" stroke="#C5A059" stroke-width="3" />
+
+                <line x1="130" y1="144" x2="135" y2="99" stroke="#C5A059" stroke-width="3" />
+                <line x1="130" y1="144" x2="90" y2="135" stroke="#C5A059" stroke-width="3" />
+
+                <line x1="50" y1="144" x2="90" y2="135" stroke="#C5A059" stroke-width="3" />
+                <line x1="50" y1="144" x2="45" y2="99" stroke="#C5A059" stroke-width="3" />
+
+                <line x1="27" y1="72" x2="45" y2="99" stroke="#C5A059" stroke-width="3" />
+                <line x1="27" y1="72" x2="63" y2="50" stroke="#C5A059" stroke-width="3" />
+            </svg>
+        </div>
+
+        <button onclick="convertToPNG()">📥 Baixar apple-touch-icon.png</button>
+
+        <div class="instructions">
+            <strong>Instruções:</strong><br>
+            1. Clique no botão acima<br>
+            2. Salve o arquivo como <code>apple-touch-icon.png</code><br>
+            3. Mova o arquivo para a pasta <code>public</code> do projeto
+        </div>
+    </div>
+
+    <canvas id="canvas" width="180" height="180" style="display: none;"></canvas>
+
+    <script>
+        function convertToPNG() {
+            const svg = document.getElementById('favicon-svg');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Serialize SVG
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            // Create image from SVG
+            const img = new Image();
+            img.onload = function () {
+                // Draw to canvas
+                ctx.drawImage(img, 0, 0, 180, 180);
+
+                // Convert to PNG and download
+                canvas.toBlob(function (blob) {
+                    const link = document.createElement('a');
+                    link.download = 'apple-touch-icon.png';
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+
+                    // Cleanup
+                    URL.revokeObjectURL(url);
+                }, 'image/png');
+            };
+
+            img.src = url;
+        }
+    </script>
+</body>
+
+</html>

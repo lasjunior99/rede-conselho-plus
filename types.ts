@@ -21,6 +21,8 @@ export interface BlogPost {
   content: string;
   excerpt: string;
   imageUrl: string; // Base64 Data URI or URL
+  externalLink?: string; // Optional external link for the full article
+  pdfUrl?: string; // Optional PDF URL for the full article content
 }
 
 export interface NewsItem {

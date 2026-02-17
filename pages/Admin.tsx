@@ -5,6 +5,7 @@ import { CATEGORIES, MetaConfig, Metric, Tool, Member, BlogPost, NewsItem, Messa
 import { Lock, Plus, Trash2, Edit2, LayoutDashboard, FileText, Newspaper, Users, Globe, BarChart, Briefcase, Download, Link as LinkIcon, Eye, EyeOff, ShieldAlert, Upload, XCircle, Save, FileSpreadsheet, ChevronUp, ChevronDown, Instagram, Mail, MessageSquare, ArrowRight, Search, Filter } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
+
 const Admin: React.FC = () => {
   const {
     isAdmin, login, logout, changePassword,
@@ -43,7 +44,7 @@ const Admin: React.FC = () => {
   const initialMemberState = { name: '', role: '', bio: '', specialization: [] as string[], photoUrl: '', cvUrl: '', linkedinUrl: '', email: '', profileUrl: '' };
   const [newMember, setNewMember] = useState(initialMemberState);
 
-  const initialPostState = { title: '', author: '', content: '', excerpt: '', imageUrl: '' };
+  const initialPostState = { title: '', author: '', content: '', excerpt: '', imageUrl: '', externalLink: '', pdfUrl: '' };
   const [newPost, setNewPost] = useState(initialPostState);
 
   const initialNewsState = { title: '', source: '', summary: '', link: '' };
@@ -152,6 +153,15 @@ const Admin: React.FC = () => {
     }
   };
 
+  const handlePostPDFUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      try {
+        const base64 = await processFile(e.target.files[0], 'PDF');
+        setNewPost(prev => ({ ...prev, pdfUrl: base64 }));
+      } catch (err) { console.error(err); }
+    }
+  };
+
   const handleAddArea = (area: string) => {
     if (area === "") return;
     if (newMember.specialization.includes(area)) {
@@ -185,9 +195,10 @@ const Admin: React.FC = () => {
     setNewMember(prev => ({ ...prev, specialization: newSpec }));
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(passwordInput)) setError('');
+    const success = await login(passwordInput);
+    if (success) setError('');
     else setError('Senha incorreta.');
   };
 
@@ -217,20 +228,26 @@ const Admin: React.FC = () => {
     setNewMember(initialMemberState);
   };
 
-  const handleSubmitMember = (e: React.FormEvent) => {
+  const handleSubmitMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMember.specialization.length === 0) {
       alert("Selecione pelo menos uma área de atuação.");
       return;
     }
-    if (editingMemberId) {
-      updateMember(editingMemberId, { ...newMember, id: editingMemberId });
-      alert("Membro atualizado com sucesso!");
-    } else {
-      addMember({ ...newMember, id: Date.now().toString() });
-      alert("Membro cadastrado com sucesso!");
+
+    try {
+      if (editingMemberId) {
+        await updateMember(editingMemberId, { ...newMember, id: editingMemberId });
+        alert("Membro atualizado com sucesso!");
+      } else {
+        await addMember({ ...newMember, id: Date.now().toString() });
+        alert("Membro cadastrado com sucesso!");
+      }
+      handleCancelEditMember();
+    } catch (error: any) {
+      console.error("Erro ao salvar membro:", error);
+      alert(`Erro ao salvar membro: ${error.message || "Erro desconhecido"}`);
     }
-    handleCancelEditMember();
   };
 
   const handleEditPost = (post: BlogPost) => {
@@ -240,7 +257,9 @@ const Admin: React.FC = () => {
       author: post.author,
       content: post.content,
       excerpt: post.excerpt,
-      imageUrl: post.imageUrl
+      imageUrl: post.imageUrl,
+      externalLink: post.externalLink || '',
+      pdfUrl: post.pdfUrl || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -250,21 +269,27 @@ const Admin: React.FC = () => {
     setNewPost(initialPostState);
   };
 
-  const handleSubmitPost = (e: React.FormEvent) => {
+  const handleSubmitPost = async (e: React.FormEvent) => {
     e.preventDefault();
     const existingPost = blogPosts.find(p => p.id === editingPostId);
     const postData = {
       ...newPost,
       date: existingPost ? existingPost.date : new Date().toISOString()
     };
-    if (editingPostId) {
-      updateBlogPost(editingPostId, { ...postData, id: editingPostId });
-      alert("Artigo atualizado com sucesso!");
-    } else {
-      addBlogPost({ ...postData, id: Date.now().toString() });
-      alert("Artigo publicado com sucesso!");
+
+    try {
+      if (editingPostId) {
+        await updateBlogPost(editingPostId, { ...postData, id: editingPostId });
+        alert("Artigo atualizado com sucesso!");
+      } else {
+        await addBlogPost({ ...postData, id: Date.now().toString() });
+        alert("Artigo publicado com sucesso!");
+      }
+      handleCancelEditPost();
+    } catch (error: any) {
+      console.error("Erro ao salvar artigo:", error);
+      alert(`Erro ao salvar artigo: ${error.message || "Erro desconhecido"}`);
     }
-    handleCancelEditPost();
   };
 
   const handleEditNews = (news: NewsItem) => {
@@ -283,21 +308,27 @@ const Admin: React.FC = () => {
     setNewNews(initialNewsState);
   };
 
-  const handleSubmitNews = (e: React.FormEvent) => {
+  const handleSubmitNews = async (e: React.FormEvent) => {
     e.preventDefault();
     const existingNews = newsItems.find(n => n.id === editingNewsId);
     const newsData = {
       ...newNews,
       date: existingNews ? existingNews.date : new Date().toISOString()
     };
-    if (editingNewsId) {
-      updateNewsItem(editingNewsId, { ...newsData, id: editingNewsId });
-      alert("Notícia atualizada com sucesso!");
-    } else {
-      addNewsItem({ ...newsData, id: Date.now().toString() });
-      alert("Notícia publicada com sucesso!");
+
+    try {
+      if (editingNewsId) {
+        await updateNewsItem(editingNewsId, { ...newsData, id: editingNewsId });
+        alert("Notícia atualizada com sucesso!");
+      } else {
+        await addNewsItem({ ...newsData, id: Date.now().toString() });
+        alert("Notícia publicada com sucesso!");
+      }
+      handleCancelEditNews();
+    } catch (error: any) {
+      console.error("Erro ao salvar notícia:", error);
+      alert(`Erro ao salvar notícia: ${error.message || "Erro desconhecido"}`);
     }
-    handleCancelEditNews();
   };
 
   const handleAddTool = (e: React.FormEvent) => {
@@ -799,8 +830,19 @@ const Admin: React.FC = () => {
                       {newPost.imageUrl && <img src={newPost.imageUrl} alt="Preview" className="h-10 w-16 object-cover ml-2 border rounded" />}
                     </div>
                   </div>
+                  <input placeholder="Link Externo (Opcional - Prioridade sobre PDF)" className="border p-2 rounded focus:outline-none focus:border-brand-gold w-full" value={newPost.externalLink || ''} onChange={e => setNewPost({ ...newPost, externalLink: e.target.value })} />
+
+                  <div className="relative border border-slate-300 rounded p-2 bg-slate-50 flex items-center w-full">
+                    <div className="mr-3 text-slate-400"><FileText className="h-5 w-5" /></div>
+                    <div className="flex-grow">
+                      <label className="block text-xs font-bold text-slate-500 uppercase">Arquivo PDF do Artigo</label>
+                      <input type="file" accept="application/pdf" onChange={handlePostPDFUpload} className="text-xs w-full" />
+                    </div>
+                    {newPost.pdfUrl && <span className="text-xs text-green-600 font-bold ml-2">PDF ANEXADO</span>}
+                  </div>
+
                   <input placeholder="Resumo (Excerpt)" className="border p-2 rounded focus:outline-none focus:border-brand-gold w-full" value={newPost.excerpt} onChange={e => setNewPost({ ...newPost, excerpt: e.target.value })} required />
-                  <textarea placeholder="Conteúdo completo" className="border p-2 rounded h-40 focus:outline-none focus:border-brand-gold w-full" value={newPost.content} onChange={e => setNewPost({ ...newPost, content: e.target.value })} required />
+                  {/* Content removed in favor of PDF but kept in state as empty string if needed */}
                   <button type="submit" className={`text-white font-bold py-3 rounded transition flex justify-center items-center shadow-sm w-full ${editingPostId ? 'bg-brand-blue hover:bg-slate-800' : 'bg-brand-gold hover:bg-yellow-600'}`}>
                     {editingPostId ? <><Save className="h-4 w-4 mr-2" /> Atualizar Artigo</> : <><Plus className="h-4 w-4 mr-2" /> Publicar Artigo</>}
                   </button>
