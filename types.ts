@@ -110,5 +110,7 @@ export const CATEGORIES = [
   "Experiência do Cliente e Mercado",
   "Novos Negócios e Modelo de Gestão",
   "Gestão de Crises",
+  "Governança no terceiro setor",
+  "Controle Interno",
   "Empreendedorismo"
 ];
